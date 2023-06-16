@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/uaccess.h>
@@ -1068,8 +1068,7 @@ static bool cam_icp_update_clk_free(struct cam_icp_hw_mgr *hw_mgr,
 
 static bool cam_icp_debug_clk_update(struct cam_icp_clk_info *hw_mgr_clk_info)
 {
-	if (icp_hw_mgr.icp_debug_clk < ICP_CLK_TURBO_HZ &&
-		icp_hw_mgr.icp_debug_clk &&
+	if (icp_hw_mgr.icp_debug_clk &&
 		icp_hw_mgr.icp_debug_clk != hw_mgr_clk_info->curr_clk) {
 		hw_mgr_clk_info->base_clk = icp_hw_mgr.icp_debug_clk;
 		hw_mgr_clk_info->curr_clk = icp_hw_mgr.icp_debug_clk;
@@ -2017,7 +2016,7 @@ static int cam_icp_mgr_cleanup_ctx(struct cam_icp_hw_ctx_data *ctx_data)
 
 	return 0;
 }
-/*
+
 static const char *cam_icp_error_handle_id_to_type(
 	uint32_t error_handle)
 {
@@ -2080,7 +2079,7 @@ static const char *cam_icp_error_handle_id_to_type(
 		break;
 	}
 	return name;
-} */
+}
 
 static int cam_icp_mgr_handle_frame_process(uint32_t *msg_ptr, int flag)
 {
@@ -4206,13 +4205,13 @@ static int cam_icp_mgr_pkt_validation(struct cam_packet *packet)
 		return -EINVAL;
 	}
 
-	if (packet->num_io_configs > IPE_IO_IMAGES_MAX) {
+	if (!packet->num_io_configs || packet->num_io_configs > IPE_IO_IMAGES_MAX) {
 		CAM_ERR(CAM_ICP, "Invalid number of io configs: %d %d",
 			IPE_IO_IMAGES_MAX, packet->num_io_configs);
 		return -EINVAL;
 	}
 
-	if (packet->num_cmd_buf > CAM_ICP_CTX_MAX_CMD_BUFFERS) {
+	if (!packet->num_cmd_buf || packet->num_cmd_buf > CAM_ICP_CTX_MAX_CMD_BUFFERS) {
 		CAM_ERR(CAM_ICP, "Invalid number of cmd buffers: %d %d",
 			CAM_ICP_CTX_MAX_CMD_BUFFERS, packet->num_cmd_buf);
 		return -EINVAL;
