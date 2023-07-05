@@ -876,6 +876,9 @@ static int dsi_panel_update_backlight(struct dsi_panel *panel,
 
 	mode = panel->cur_mode;
 
+	if (panel->is_hbm_enabled || HBM_flag == true)
+		return 0;
+
 	saved_backlight = bl_lvl;
 
 	if (op_dimlayer_bl_enabled != op_dimlayer_bl_enable_real) {
@@ -5923,6 +5926,7 @@ int dsi_panel_set_hbm_mode(struct dsi_panel *panel, int level)
 				goto error;
 			}
 			else {
+				dsi_panel_update_backlight(panel, panel->hbm_backlight);
 				HBM_flag = true;
 				rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_HBM_ON_5);
 				DSI_ERR("Send DSI_CMD_SET_HBM_ON_5 cmds.\n");
