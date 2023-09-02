@@ -783,6 +783,8 @@
 	///qcom,offset_temp = <30>;
 	//for control:
 	//qcom,suspend_after_full;
+	qcom,warp_show_ui_soc_decimal;
+	qcom,ui_soc_decimal_speedmin = <2>;
 	qcom,check_batt_full_by_sw;
 	qcom,external_gauge;
 	qcom,chg_ctrl_by_lcd;
@@ -1059,14 +1061,14 @@
 			compatible = "oplus,common-charge";
 
 			io-channels = <&pmk8350_vadc PM8350_ADC7_AMUX_THM3_100K_PU>;
-			io-channel-names = "pm8350_skin_therm";
+			io-channel-names = "pm8350_hot_pocket_therm";
 
-			oplus,skin_temp_chan = "pm8350_skin_therm";
-			panel = <&dsi_samsung_amb670yf01_dsc_cmd
+			oplus,skin_temp_chan = "pm8350_hot_pocket_therm";
+			/* panel = <&dsi_samsung_amb670yf01_dsc_cmd
 				 &dsi_samsung_amb655x_dsc_cmd
 				 &dsi_samsung_amb655xl08_dsc_cmd
 				 &dsi_samsung_ana6706_dsc_cmd
-				 &dsi_samsung_amb670yf01_o_dsc_cmd>;
+				 &dsi_samsung_amb670yf01_o_dsc_cmd>; */
 
 			oplus,check-batt-full-by-sw;
 			oplus,fv-offset-voltage-mv = <50>;

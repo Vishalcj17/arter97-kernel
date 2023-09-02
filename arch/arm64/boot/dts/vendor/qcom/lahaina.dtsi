@@ -61,8 +61,6 @@
 		swr2 = &swr2;
 		usb0 = &usb0;
 		usb1 = &usb1;
-		i2c0 = &qupv3_se19_i2c;
-		i2c4 = &qupv3_se4_i2c;
 	};
 
 	firmware: firmware {};
@@ -359,52 +357,62 @@
 
 	pil_adsp_mem: pil_adsp_region@86100000 {
 		no-map;
-		reg = <0x0 0x86100000 0x0 0x2500000>;
+		reg = <0x0 0x86100000 0x0 0x2100000>;
 	};
 
-	pil_slpi_mem: pil_slpi_region@88600000 {
+	pil_slpi_mem: pil_slpi_region@88200000 {
 		no-map;
-		reg = <0x0 0x88600000 0x0 0x1500000>;
+		reg = <0x0 0x88200000 0x0 0x1500000>;
 	};
 
-	pil_cdsp_mem: pil_cdsp_region@89B00000 {
+	pil_cdsp_mem: pil_cdsp_region@89700000 {
 		no-map;
-		reg = <0x0 0x89B00000 0x0 0x1e00000>;
+		//#ifndef OPLUS_FEATURE_SENSOR_DRIVER
+		//reg = <0x0 0x89700000 0x0 0x1e00000>;
+		//#else
+		reg = <0x0 0x89700000 0x0 0x1400000>;
+		//#endif
 	};
 
-	pil_ipa_fw_mem: pil_ipa_fw_region@8b900000 {
+	pil_ipa_fw_mem: pil_ipa_fw_region@8b500000 {
 		no-map;
-		reg = <0x0 0x8b900000 0x0 0x10000>;
+		reg = <0x0 0x8b500000 0x0 0x10000>;
 	};
 
-	pil_ipa_gsi_mem: pil_ipa_gsi_region@8b910000 {
+	pil_ipa_gsi_mem: pil_ipa_gsi_region@8b510000 {
 		no-map;
-		reg = <0x0 0x8b910000 0x0 0xa000>;
+		reg = <0x0 0x8b510000 0x0 0xa000>;
 	};
 
-	pil_gpu_mem: pil_gpu_region@8b91a000 {
+	pil_gpu_mem: pil_gpu_region@8b51a000 {
 		no-map;
-		reg = <0x0 0x8b91a000 0x0 0x2000>;
+		reg = <0x0 0x8b51a000 0x0 0x2000>;
 	};
 
-	pil_spss_mem: pil_spss_region@8ba00000 {
+	pil_spss_mem: pil_spss_region@8b600000 {
 		no-map;
-		reg = <0x0 0x8ba00000 0x0 0x100000>;
+		reg = <0x0 0x8b600000 0x0 0x100000>;
 	};
 
-	pil_modem_mem: modem_region@8bc00000 {
+	pil_modem_mem: modem_region@8b800000 {
 		no-map;
-		reg = <0x0 0x8bc00000 0x0 0x10000000>;
+		reg = <0x0 0x8b800000 0x0 0x10000000>;
 	};
 
 	hyp_reserved_mem: qheebsp_dbg_vm_hyp_region@d0000000 {
 		no-map;
-		reg = <0x0 0xd0000000 0x0 0x800000>;
+		//#ifdef OPLUS_FEATURE_BOOT_SECURITY
+		/* 2020/12/16, delete for not use TVM TUI */
+		//reg = <0x0 0xd0000000 0x0 0x800000>;
+		//#endif /* OPLUS_FEATURE_BOOT_SECURITY */
 	};
 
 	pil_trustedvm_mem: pil_trustedvm_region@d0800000 {
 		no-map;
-		reg = <0x0 0xd0800000 0x0 0x76f7000>;
+		//#ifdef OPLUS_FEATURE_BOOT_SECURITY
+		/* 2020/12/16, delete for not use TVM TUI */
+		//reg = <0x0 0xd0800000 0x0 0x76f7000>;
+		//#endif /* OPLUS_FEATURE_BOOT_SECURITY */
 	};
 
 	qrtr_shbuf: qrtr-shmem {
@@ -488,7 +496,11 @@
 		alloc-ranges = <0x0 0x00000000 0x0 0xffffffff>;
 		reusable;
 		alignment = <0x0 0x400000>;
-		size = <0x0 0x1400000>;
+		#ifndef OPLUS_BUG_STABILITY
+		#size = <0x0 0x1400000>;
+		#else
+		size = <0x0 0x1E00000>;
+		#endif /* OPLUS_BUG_STABILITY */
 	};
 
 	/* global autoconfigured region for contiguous allocations */
@@ -529,11 +541,13 @@
 	demura_memory_0: demura_region_0 {
 		reg = <0x0 0x0 0x0 0x0>;
 		label = "demura hfc region 0";
+		status = "disabled";
 	};
 
 	demura_memory_1: demura_region_1 {
 		reg = <0x0 0x0 0x0 0x0>;
 		label = "demura hfc region 1";
+		status = "disabled";
 	};
 
 	dfps_data_memory: dfps_data_region {
@@ -560,10 +574,6 @@
 		reusable;
 		alignment = <0x0 0x400000>;
 		size = <0x0 0x6400000>;
-	};
-
-	chosen {
-		bootargs = "log_buf_len=1024K rcupdate.rcu_expedited=1 rcu_nocbs=0-7";
 	};
 };
 
@@ -1280,6 +1290,8 @@
 				<DCC_READ 0x91a5100 1 0>,
 				<DCC_READ 0x91ad100 1 0>,
 				<DCC_READ 0x610110 5 0>,
+				/* add by yanghao remove shrm dcc for core hang issue */
+				/*
 				<DCC_WRITE 0x06e0a00c 0x00600007 1>,
 				<DCC_WRITE 0x06e0a01c 0x00136800 1>,
 				<DCC_READ 0x06e0a014 1 1>,
@@ -1348,6 +1360,7 @@
 				<DCC_WRITE 0x06e0a01c 0x0013b6a0 1>,
 				<DCC_WRITE 0x06e0a01c 0x00f1e000 1>,
 				<DCC_WRITE 0x06e0a008 0x00000007 1>,
+				*/
 				<DCC_READ 0x09067e00 124 0>;
 		};
 
@@ -1797,6 +1810,8 @@
 				<DCC_READ 0x91a5100 1 0>,
 				<DCC_READ 0x91ad100 1 0>,
 				<DCC_READ 0x610110 5 0>,
+				/* add by yanghao remove shrm dcc for core hang issue */
+				/*
 				<DCC_WRITE 0x06e0a00c 0x00600007 1>,
 				<DCC_WRITE 0x06e0a01c 0x00136800 1>,
 				<DCC_READ 0x06e0a014 1 1>,
@@ -1865,6 +1880,7 @@
 				<DCC_WRITE 0x06e0a01c 0x0013b6a0 1>,
 				<DCC_WRITE 0x06e0a01c 0x00f1e000 1>,
 				<DCC_WRITE 0x06e0a008 0x00000007 1>,
+				*/
 				<DCC_READ 0x09067e00 124 0>;
 		};
 
@@ -2250,6 +2266,7 @@
 		clock-names = "core_clk";
 
 		qcom,coresight-jtagmm-cpu = <&CPU0>;
+		status = "disabled";
 	};
 
 	jtag_mm1: jtagmm@7140000 {
@@ -2261,6 +2278,7 @@
 		clock-names = "core_clk";
 
 		qcom,coresight-jtagmm-cpu = <&CPU1>;
+		status = "disabled";
 	};
 
 	jtag_mm2: jtagmm@7240000 {
@@ -2272,6 +2290,7 @@
 		clock-names = "core_clk";
 
 		qcom,coresight-jtagmm-cpu = <&CPU2>;
+		status = "disabled";
 	};
 
 	jtag_mm3: jtagmm@7340000 {
@@ -2283,6 +2302,7 @@
 		clock-names = "core_clk";
 
 		qcom,coresight-jtagmm-cpu = <&CPU3>;
+		status = "disabled";
 	};
 
 	jtag_mm4: jtagmm@7440000 {
@@ -2294,6 +2314,7 @@
 		clock-names = "core_clk";
 
 		qcom,coresight-jtagmm-cpu = <&CPU4>;
+		status = "disabled";
 	};
 
 	jtag_mm5: jtagmm@7540000 {
@@ -2305,6 +2326,7 @@
 		clock-names = "core_clk";
 
 		qcom,coresight-jtagmm-cpu = <&CPU5>;
+		status = "disabled";
 	};
 
 	jtag_mm6: jtagmm@7640000 {
@@ -2316,6 +2338,7 @@
 		clock-names = "core_clk";
 
 		qcom,coresight-jtagmm-cpu = <&CPU6>;
+		status = "disabled";
 	};
 
 	jtag_mm7: jtagmm@7740000 {
@@ -2327,6 +2350,7 @@
 		clock-names = "core_clk";
 
 		qcom,coresight-jtagmm-cpu = <&CPU7>;
+		status = "disabled";
 	};
 
 	qcom,memshare {
@@ -2952,6 +2976,7 @@
 		clock-names = "core_clk";
 
 		qcom,coresight-jtagmm-cpu = <&CPU0>;
+		status = "disabled";
 	};
 
 	jtag_mm1: jtagmm@7140000 {
@@ -2963,6 +2988,7 @@
 		clock-names = "core_clk";
 
 		qcom,coresight-jtagmm-cpu = <&CPU1>;
+		status = "disabled";
 	};
 
 	jtag_mm2: jtagmm@7240000 {
@@ -2974,6 +3000,7 @@
 		clock-names = "core_clk";
 
 		qcom,coresight-jtagmm-cpu = <&CPU2>;
+		status = "disabled";
 	};
 
 	jtag_mm3: jtagmm@7340000 {
@@ -2985,6 +3012,7 @@
 		clock-names = "core_clk";
 
 		qcom,coresight-jtagmm-cpu = <&CPU3>;
+		status = "disabled";
 	};
 
 	jtag_mm4: jtagmm@7440000 {
@@ -2996,6 +3024,7 @@
 		clock-names = "core_clk";
 
 		qcom,coresight-jtagmm-cpu = <&CPU4>;
+		status = "disabled";
 	};
 
 	jtag_mm5: jtagmm@7540000 {
@@ -3007,6 +3036,7 @@
 		clock-names = "core_clk";
 
 		qcom,coresight-jtagmm-cpu = <&CPU5>;
+		status = "disabled";
 	};
 
 	jtag_mm6: jtagmm@7640000 {
@@ -3018,6 +3048,7 @@
 		clock-names = "core_clk";
 
 		qcom,coresight-jtagmm-cpu = <&CPU6>;
+		status = "disabled";
 	};
 
 	jtag_mm7: jtagmm@7740000 {
@@ -3029,6 +3060,7 @@
 		clock-names = "core_clk";
 
 		qcom,coresight-jtagmm-cpu = <&CPU7>;
+		status = "disabled";
 	};
 
 	qcom,rmtfs_sharedmem@0 {
@@ -3173,9 +3205,6 @@
 		iommus = <&apps_smmu 0xE0 0x0>;
 		qcom,iommu-dma = "fastmap";
 		dma-coherent;
-
-		rpm-level = <3>;
-		spm-level = <3>;
 
 		status = "disabled";
 		qos0 {
@@ -4667,7 +4696,6 @@
 		qcom,ipa-holb-monitor-max-cnt-11ad = <10>;
 		qcom,tx-wrapper-cache-max-size = <400>;
 		qcom,ipa-gpi-event-rp-ddr;
-		qcom,register-collection-on-crash;
 		clock-names = "core_clk";
 		clocks = <&clock_rpmh RPMH_IPA_CLK>;
 		qcom,interconnect,num-cases = <5>;
@@ -5303,8 +5331,8 @@
 		qcom,bt-vdd-rfa2-supply = <&S12B>;
 		qcom,bt-vdd-asd-supply = <&L7E>;
 
-		qcom,bt-vdd-aon-config = <950000 950000 0 1>;
-		qcom,bt-vdd-dig-config = <950000 950000 0 1>;
+		qcom,bt-vdd-aon-config = <950000 950000 0 0>;
+		qcom,bt-vdd-dig-config = <950000 950000 0 0>;
 		qcom,bt-vdd-rfa1-config = <1880000 1880000 0 1>;
 		qcom,bt-vdd-rfa2-config = <1350000 1350000 0 1>;
 		qcom,bt-vdd-asd-config = <2800000 2800000 0 1>;

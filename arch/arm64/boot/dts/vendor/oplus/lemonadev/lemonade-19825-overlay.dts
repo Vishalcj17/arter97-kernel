@@ -1,14 +1,13 @@
-/dts-v1/;
-/plugin/;
-
-#include "../../../arch/arm64/boot/dts/vendor/qcom/lahaina-mtp-overlay.dts"
-#include "lahaina_oem.dtsi"
-#include "lemonade.dtsi"
-#include "lemonade-thermal-overlay.dtsi"
-#include"../../../arch/arm64/boot/dts/vendor/qcom/camera/lahaina-oem-camera-lemonade_t0.dtsi"
+#include "../../qcom/lahaina-mtp-overlay.dts"
+#include "lahaina_overlay_oplus_common.dtsi"
+#include "lahaina_overlay_oplus_common_pinctrl.dtsi"
+#include "lemonade_common.dtsi"
+#include "lemonade-19825.dtsi"
+#include "../../qcom/camera/lahaina-oem-camera-lemonade_t0.dtsi"
 / {
     model = "Qualcomm Technologies, Inc. Lahaina MTP lemonade";
     /*we can add project id to this array,uefi can auto read it,if new project,we add to this array */
+    oplus,dtsi_no = <19825>;
     oem,project-id = <0x19825>; /*8350 use hex*/
     oem,project-codename = "lemonade";
     /*we can add hw id to this array,uefi can auto read it,if new hw,we add to this array  */
