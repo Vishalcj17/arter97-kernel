@@ -1,454 +1,67 @@
-/***********************************************************
-* Description : OnePlus touchpanel driver
-* 
-* File		  : touch_interfaces.h
-*
-* Function	  : touchpanel public interface
-* 
-* Version	  : V1.0
-*
-***********************************************************/
+/* SPDX-License-Identifier: GPL-2.0-only */
+/*
+ * Copyright (C) 2018-2020 Oplus. All rights reserved.
+ */
 
+#include <linux/spi/spi.h>
 #ifndef TOUCH_INTERFACES_H
 #define TOUCH_INTERFACES_H
 
-#include <linux/kernel.h>
-#include <linux/module.h>
-#include <linux/slab.h>
-#include <linux/i2c.h>
-#include <linux/spi/spi.h>
-#include <linux/interrupt.h>
-#include <linux/delay.h>
-#include <linux/input.h>
-#include <linux/gpio.h>
-#include <linux/uaccess.h>
-#include <linux/cdev.h>
-#include <linux/dma-mapping.h>
-
-#include "../touchpanel_common.h"
-
 #define MAX_I2C_RETRY_TIME 2
 
-//---SPI READ/WRITE---
-#define SPI_WRITE_MASK(a)	(a | 0x80)
-#define SPI_READ_MASK(a)	(a & 0x7F)
+/*---SPI READ/WRITE---*/
+#define SPI_WRITE_MASK(a)   (a | 0x80)
+#define SPI_READ_MASK(a)    (a & 0x7F)
 #define DUMMY_BYTES (1)
-#define SPI_TANSFER_LEN		512
+#define SPI_TANSFER_LEN     512
 
 typedef enum {
 	SPIWRITE = 1,
-	SPIREAD = 2
+	SPIREAD  = 2
 } SPI_RW;
 
-struct touch_dma_buf {
-	unsigned char read_buf[1];
-	unsigned char read_byte_buf[2];
-	unsigned char read_word_buf[2];
-	unsigned char write_buf[32];
+struct interface_data {
+	bool register_is_16bit;
+	struct mutex bus_mutex;
+	/****i2c write**/
+	unsigned int write_buf_size;
+	unsigned char *write_buf;
+	/****i2c read**/
+	unsigned char *read_buf;
+	unsigned int read_buf_size;
+	unsigned char *read_w_buffer;
+	unsigned int read_w_buf_size;
 };
 
-#define TPD_I2C_INFO(a, arg...)  pr_err("[TP]touch_interface: " a, ##arg)
+int touch_i2c_read_byte(struct i2c_client *client, u16 addr);
+int touch_i2c_write_byte(struct i2c_client *client, u16 addr,
+			 unsigned char data);
+
+int touch_i2c_read_word(struct i2c_client *client, u16 addr);
+int touch_i2c_write_word(struct i2c_client *client, u16 addr,
+			 unsigned short data);
+
+int touch_i2c_read_block(struct i2c_client *client, u16 addr,
+			 unsigned short length, unsigned char *data);
+int touch_i2c_write_block(struct i2c_client *client, u16 addr,
+			  unsigned short length, unsigned char const *data);
+
+int touch_i2c_read(struct i2c_client *client, char *writebuf,
+		   unsigned short writelen, char *readbuf, unsigned short readlen);
+int touch_i2c_write(struct i2c_client *client, char *writebuf,
+		    unsigned short writelen);
+
+int init_touch_interfaces(struct device *dev, bool flag_register_16bit);
+int touch_i2c_continue_read(struct i2c_client *client, unsigned short length,
+			    unsigned char *data);
+int touch_i2c_continue_write(struct i2c_client *client, unsigned short length,
+			     unsigned char *data);
+int32_t spi_read_write(struct spi_device *client, uint8_t *buf, size_t len,
+		       uint8_t *rbuf, SPI_RW rw);
+int32_t CTP_SPI_READ(struct spi_device *client, uint8_t *buf, uint16_t len);
+int32_t CTP_SPI_WRITE(struct spi_device *client, uint8_t *buf, uint16_t len);
+int spi_write_firmware(struct spi_device *client, u8 *fw, u32 *len_array,
+		       u8 array_len);
+
+#endif /*TOUCH_INTERFACES_H*/
 
-// Initialized from touchpanel_common_driver.c
-extern struct touch_dma_buf *i2c_dma_buffer;
-
-/**
- * touch_i2c_continue_read - Using for "read sequence bytes" through IIC
- * @client: Handle to slave device
- * @length: data size we want to read
- * @data: data read from IIC
- *
- * Actully, This function call i2c_transfer for IIC transfer,
- * Returning transfer length(transfer success) or most likely negative errno(transfer error)
- */
-static inline int touch_i2c_continue_read(struct i2c_client *client, unsigned short length, unsigned char *data)
-{
-	unsigned char retry;
-	struct i2c_msg msg;
-
-	msg.addr = client->addr;
-	msg.flags = I2C_M_RD;
-	msg.len = length;
-	msg.buf = data;
-
-	for (retry = 0; retry < MAX_I2C_RETRY_TIME; retry++) {
-		if (likely(i2c_transfer(client->adapter, &msg, 1) == 1))
-			return length;
-
-		msleep(20);
-	}
-
-	dev_err(&client->dev, "%s: I2C read over retry limit\n", __func__);
-
-	return -EIO;
-}
-
-/**
- * touch_i2c_read_block - Using for "read word" through IIC
- * @client: Handle to slave device
- * @addr: addr to write
- * @length: data size we want to send
- * @data: data we want to send
- *
- * Actully, This function call i2c_transfer for IIC transfer,
- * Returning transfer length(transfer success) or most likely negative errno(transfer error)
- */
-static inline int touch_i2c_read_block(struct i2c_client *client, u16 addr,
-			 unsigned short length, unsigned char *data)
-{
-	unsigned char retry;
-	struct i2c_msg msg[2];
-
-	msg[0].addr = client->addr;
-	msg[0].flags = 0;
-	msg[0].len = 1;
-	msg[0].buf = i2c_dma_buffer->read_buf;
-	msg[0].buf[0] = addr & 0xff;
-
-	msg[1].addr = client->addr;
-	msg[1].flags = I2C_M_RD;
-	msg[1].len = length;
-	msg[1].buf = data;
-
-	for (retry = 0; retry < MAX_I2C_RETRY_TIME; retry++) {
-		if (likely(i2c_transfer(client->adapter, msg, 2) == 2))
-			return length;
-
-		msleep(20);
-	}
-
-	dev_err(&client->dev, "%s: I2C read over retry limit\n", __func__);
-
-	return -EIO;
-}
-
-/**
- * touch_i2c_continue_write - Using for "write sequence bytes" through IIC
- * @client: Handle to slave device
- * @length: data size we want to write
- * @data: data write to IIC
- *
- * Actully, This function call i2c_transfer for IIC transfer,
- * Returning transfer length(transfer success) or most likely negative errno(transfer error)
- */
-static inline int touch_i2c_continue_write(struct i2c_client *client, unsigned short length, unsigned char *data)
-{
-	unsigned char retry;
-	struct i2c_msg msg;
-
-	msg.addr = client->addr;
-	msg.flags = 0;
-	msg.buf = data;
-	msg.len = length;
-
-	for (retry = 0; retry < MAX_I2C_RETRY_TIME; retry++) {
-		if (likely(i2c_transfer(client->adapter, &msg, 1) == 1))
-			return length;
-
-		msleep(20);
-	}
-
-	dev_err(&client->dev, "%s: I2C write over retry limit\n", __func__);
-
-	return -EIO;
-}
-
-/**
- * touch_i2c_write_block - Using for "read word" through IIC
- * @client: Handle to slave device
- * @addr: addr to write
- * @length: data size we want to send
- * @data: data we want to send
- *
- * Actully, This function call i2c_transfer for IIC transfer,
- * Returning transfer length(transfer success) or most likely negative errno(transfer error)
- */
-static inline int touch_i2c_write_block(struct i2c_client *client, u16 addr,
-			  unsigned short length, unsigned char const *data)
-{
-	unsigned char retry;
-	struct i2c_msg msg[1];
-
-	msg[0].addr = client->addr;
-	msg[0].flags = 0;
-	msg[0].buf = i2c_dma_buffer->write_buf;
-	msg[0].len = length + 1;
-	msg[0].buf[0] = addr & 0xff;
-
-	memcpy(i2c_dma_buffer->write_buf + 1, data, length);
-
-	for (retry = 0; retry < MAX_I2C_RETRY_TIME; retry++) {
-		if (likely(i2c_transfer(client->adapter, msg, 1) == 1))
-			return length;
-
-		msleep(20);
-	}
-
-	dev_err(&client->dev, "%s: I2C write over retry limit\n", __func__);
-
-	return -EIO;
-}
-
-/**
- * touch_i2c_read_byte - Using for "read word" through IIC
- * @client: Handle to slave device
- * @addr: addr to read
- *
- * Actully, This function call touch_i2c_read_block for IIC transfer,
- * Returning zero(transfer success) or most likely negative errno(transfer error)
- */
-static inline int touch_i2c_read_byte(struct i2c_client *client, unsigned short addr)
-{
-	int retval = 0;
-	unsigned char *buf = i2c_dma_buffer->read_byte_buf;
-
-	if (unlikely(!client)) {
-		dump_stack();
-		return -1;
-	}
-
-	retval = touch_i2c_read_block(client, addr, 1, buf);
-	if (likely(retval == 1))
-		retval = buf[0] & 0xff;
-
-	return retval;
-}
-
-/**
- * touch_i2c_write_byte - Using for "read word" through IIC
- * @client: Handle to slave device
- * @addr: addr to write
- * @data: data we want to send
- *
- * Actully, This function call touch_i2c_write_block for IIC transfer,
- * Returning zero(transfer success) or most likely negative errno(transfer error)
- */
-static inline int touch_i2c_write_byte(struct i2c_client *client, unsigned short addr,
-			 unsigned char data)
-{
-	int retval;
-	unsigned char data_send = data;
-
-	if (unlikely(!client)) {
-		dump_stack();
-		return -EINVAL;
-	}
-
-	retval = touch_i2c_write_block(client, addr, 1, &data_send);
-	if (likely(retval == 1))
-		retval = 0;
-
-	return retval;
-}
-
-/**
- * touch_i2c_read_word - Using for "read word" through IIC
- * @client: Handle to slave device
- * @addr: addr to write
- * @data: data we want to read
- *
- * Actully, This func call touch_i2c_Read_block for IIC transfer,
- * Returning negative errno else a 16-bit unsigned "word" received from the device.
- */
-static inline int touch_i2c_read_word(struct i2c_client *client, unsigned short addr)
-{
-	int retval;
-	unsigned char *buf = i2c_dma_buffer->read_word_buf;
-
-	if (unlikely(!client)) {
-		dump_stack();
-		return -EINVAL;
-	}
-
-	retval = touch_i2c_read_block(client, addr, 2, buf);
-	if (likely(retval >= 0))
-		retval = buf[1] << 8 | buf[0];
-
-	return retval;
-}
-
-/**
- * touch_i2c_write_word - Using for "read word" through IIC
- * @client: Handle to slave device
- * @addr: addr to write
- * @data: data we want to send
- *
- * Actully, This function call touch_i2c_write_block for IIC transfer,
- * Returning zero(transfer success) or most likely negative errno(transfer error)
- */
-static inline int touch_i2c_write_word(struct i2c_client *client, unsigned short addr,
-			 unsigned short data)
-{
-	int retval;
-	unsigned char buf[2];
-
-	if (unlikely(!client)) {
-		dump_stack();
-		return -EINVAL;
-	}
-
-	buf[0] = data & 0xff;
-	buf[1] = (data >> 8) & 0xff;
-
-	retval = touch_i2c_write_block(client, addr, 2, buf);
-	if (likely(retval == 2))
-		retval = 0;
-
-	return retval;
-}
-
-/**
- * touch_i2c_read - Using for "read data from ic after writing or not" through IIC
- * @client: Handle to slave device
- * @writebuf: buf to write
- * @writelen: data size we want to send
- * @readbuf:  buf we want save data
- * @readlen:  data size we want to receive
- *
- * Actully, This function call i2c_transfer for IIC transfer,
- * Returning transfer msg length(transfer success) or most likely negative errno(transfer EIO error)
- */
-static inline int touch_i2c_read(struct i2c_client *client, char *writebuf, int writelen,
-		   char *readbuf, int readlen)
-{
-	int retval = 0;
-	int retry = 0;
-
-	if (unlikely(client == NULL)) {
-		TPD_I2C_INFO("%s: i2c_client == NULL!\n", __func__);
-		return -1;
-	}
-
-	if (likely(readlen > 0)) {
-		if (writelen > 0) {
-			struct i2c_msg msgs[] = {
-				{
-				 .addr = client->addr,
-				 .flags = 0,
-				 .len = writelen,
-				 .buf = writebuf,
-				 },
-				{
-				 .addr = client->addr,
-				 .flags = I2C_M_RD,
-				 .len = readlen,
-				 .buf = readbuf,
-				 },
-			};
-
-			for (retry = 0; retry < MAX_I2C_RETRY_TIME; retry++) {
-				if (likely(i2c_transfer(client->adapter, msgs, 2) == 2))
-					return 2;
-
-				msleep(20);
-			}
-		} else {
-			struct i2c_msg msgs[] = {
-				{
-				 .addr = client->addr,
-				 .flags = I2C_M_RD,
-				 .len = readlen,
-				 .buf = readbuf,
-				 },
-			};
-
-			for (retry = 0; retry < MAX_I2C_RETRY_TIME; retry++) {
-				if (likely(i2c_transfer(client->adapter, msgs, 1) == 1))
-					return 1;
-
-				msleep(20);
-			}
-		}
-
-		if (retry == MAX_I2C_RETRY_TIME) {
-			TPD_I2C_INFO("%s: i2c_transfer(read) over retry limit\n",
-				 __func__);
-			retval = -EIO;
-		}
-	}
-
-	return retval;
-}
-
-/**
- * touch_i2c_write - Using for "write data to ic" through IIC
- * @client: Handle to slave device
- * @writebuf: buf data wo want to send
- * @writelen: data size we want to send
- *
- * Actully, This function call i2c_transfer for IIC transfer,
- * Returning transfer msg length(transfer success) or most likely negative errno(transfer EIO error)
- */
-static inline int touch_i2c_write(struct i2c_client *client, char *writebuf, int writelen)
-{
-	int retval = 0;
-	int retry = 0;
-
-	if (unlikely(client == NULL)) {
-		TPD_I2C_INFO("%s: i2c_client == NULL!", __func__);
-		return -1;
-	}
-
-	if (likely(writelen > 0)) {
-		struct i2c_msg msgs[] = {
-			{
-			 .addr = client->addr,
-			 .flags = 0,
-			 .len = writelen,
-			 .buf = writebuf,
-			 },
-		};
-
-		for (retry = 0; retry < MAX_I2C_RETRY_TIME; retry++) {
-			if (likely(i2c_transfer(client->adapter, msgs, 1) == 1))
-				return 1;
-
-			msleep(20);
-		}
-		if (retry == MAX_I2C_RETRY_TIME) {
-			TPD_I2C_INFO("%s: i2c_transfer(write) over retry limit\n",
-				 __func__);
-			retval = -EIO;
-		}
-	}
-
-	return retval;
-}
-
-/**
- * tp_test_write - instead of vfs_write,save test result to memory
- * @data_start: pointer to memory buffer
- * @max_count: max length for memory buffer
- * @buf: new buffer
- * @count: count of new buffer
- * @pos: pos of current length for memory buffer
- * we can using this function to get item offset form index item
- * Returning parameter number(success) or negative errno(failed)
- */
-
-static inline ssize_t tp_test_write(void *data_start, size_t max_count, const char *buf, size_t count, ssize_t * pos)
-{
-	ssize_t ret = 0;
-	char *p = NULL;
-
-	if (!data_start) {
-		return -1;
-	}
-
-	if (!buf) {
-		return -1;
-	}
-
-	if (*pos >= max_count) {
-		TPD_INFO("%s: pos:%ld is out of memory\n", *pos, __func__);
-		return -1;
-	}
-
-	p = (char *)data_start + *pos;
-
-	memcpy(p, buf, count);
-	*pos += count;
-
-	return ret;
-}
-#endif

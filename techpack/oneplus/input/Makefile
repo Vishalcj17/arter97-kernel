@@ -1,7 +1,6 @@
 # oem device deriver
 #
-ifeq ($(CONFIG_ARCH_LAHAINA), y)
-obj-$(CONFIG_TOUCHSCREEN) += OneplusTouchScreen/
-endif
+obj-$(CONFIG_TOUCHPANEL_CUSTOM) += touch_custom/
+obj-$(CONFIG_TOUCHPANEL_OPLUS) += OneplusTouchScreen/
 
 obj-$(CONFIG_INPUT_FINGERPRINT) += fingerprint/

@@ -1,20 +1,24 @@
 #
 # Makefile for the touchscreen drivers.
 #
-#obj-$(CONFIG_TOUCHSCREEN) += samsung/
-#obj-$(CONFIG_TOUCHSCREEN) += util_interface/
-#obj-$(CONFIG_TOUCHSCREEN) += touchpanel_common_driver.o
-#obj-$(CONFIG_TOUCHSCREEN) += synaptics/
+subdir-ccflags-$(CONFIG_TOUCHPANEL_MTK_PLATFORM) += -I$(srctree)/drivers/misc/mediatek/include/
+subdir-ccflags-$(CONFIG_OPLUS_MTK_DRM_GKI_NOTIFY) += -I$(srctree)/drivers/misc/mediatek/include/
 
-touchscreen-objs += \
-	samsung/s6sy792/sec_drivers_s6sy792.o \
-	samsung/sec_common.o \
-	synaptics/syna_tcm_oncell/synaptics_tcm_oncell.o \
-	synaptics/syna_tcm_oncell/synaptics_tcm_device.o \
-	synaptics/syna_tcm_oncell/synaptics_tcm_recovery.o \
-	synaptics/synaptics_common.o \
-	synaptics/synaptics_touch_panel_remote.o \
-	tp_module_init.o \
-	touchpanel_common_driver.o
 
-obj-$(CONFIG_TOUCHSCREEN)+=touchscreen.o
+oplus_bsp_tp_comon-y := util_interface/touch_interfaces.o
+oplus_bsp_tp_comon-y += touch_comon_api/touch_comon_api.o
+oplus_bsp_tp_comon-y += touchpanel_healthinfo/touchpanel_healthinfo.o
+oplus_bsp_tp_comon-y += touchpanel_autotest/touchpanel_autotest.o
+
+oplus_bsp_tp_comon-y += touchpanel_common_driver.o
+oplus_bsp_tp_comon-y += touchpanel_proc.o
+oplus_bsp_tp_comon-y += tp_ioctl.o
+oplus_bsp_tp_comon-y += message_list.o
+
+obj-$(CONFIG_TOUCHPANEL_OPLUS) += oplus_bsp_tp_comon.o
+
+oplus_bsp_tp_notify-y += touchpanel_notify/touchpanel_event_notify.o
+obj-$(CONFIG_TOUCHPANEL_NOTIFY) += oplus_bsp_tp_notify.o
+
+obj-$(CONFIG_TOUCHPANEL_SYNAPTICS) += Synaptics/
+obj-$(CONFIG_TOUCHPANEL_SAMSUNG) += Samsung/

@@ -1,16 +1,11 @@
- /***********************************************************
- * Description : OnePlus touchpanel driver
- * 
- * File        : tp_devices.h      
- *
- * Function    : touchpanel public interface  
- * 
- * Version     : V1.0 
- *
- ***********************************************************/
-#ifndef TP_DEVICES_H
-#define TP_DEVICES_H
-//device list define
+/* SPDX-License-Identifier: GPL-2.0-only */
+/*
+ * Copyright (C) 2018-2020 Oplus. All rights reserved.
+ */
+
+#ifndef OPLUS_TP_DEVICES_H
+#define OPLUS_TP_DEVICES_H
+/*device list define*/
 typedef enum tp_dev {
 	TP_OFILM,
 	TP_BIEL,
@@ -19,6 +14,7 @@ typedef enum tp_dev {
 	TP_G2Y,
 	TP_TPK,
 	TP_JDI,
+	TP_TIANMA,
 	TP_SAMSUNG,
 	TP_DSJM,
 	TP_BOE_B8,
@@ -26,6 +22,9 @@ typedef enum tp_dev {
 	TP_HIMAX_DPT,
 	TP_AUO,
 	TP_DEPUTE,
+	TP_HUAXING,
+	TP_HLT,
+	TP_DJN,
 	TP_UNKNOWN,
 } tp_dev;
 
@@ -34,4 +33,5 @@ struct tp_dev_name {
 	char name[32];
 };
 
-#endif
+#endif /*OPLUS_TP_DEVICES_H*/
+
