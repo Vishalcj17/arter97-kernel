@@ -68,7 +68,7 @@ static uint8_t Down2UpSwip_enable = 0;	    // |^
 static uint8_t Mgestrue_enable = 1;			// M
 static uint8_t Wgestrue_enable = 1;			// W
 static uint8_t Sgestrue_enable = 1;			// S
-static uint8_t SingleTap_enable = 0;	    // single tap
+static uint8_t SingleTap_enable = 1;	    // single tap
 
 /*******Part2:declear Area********************************/
 static void speedup_resume(struct work_struct *work);
@@ -372,13 +372,10 @@ static void tp_gesture_handle(struct touchpanel_data *ts)
 
 	ts->ts_ops->get_gesture_info(ts->chip_data, &gesture_info_temp);
 	tp_geture_info_transform(&gesture_info_temp, &ts->resolution_info);
-	if (DouTap_enable) {
-		if (gesture_info_temp.gesture_type == SingleTap) {
-			if (sec_double_tap(&gesture_info_temp) == 1) {
-				gesture_info_temp.gesture_type = DouTap;
-			}
-		}
-	}
+	ts->double_tap_pressed = (sec_double_tap(&gesture_info_temp) == 1) ? 1 : 0;
+
+	ts->single_tap_pressed = ((gesture_info_temp.gesture_type == SingleTap)) ? 1 : 0;
+	sysfs_notify(&ts->client->dev.kobj, NULL, "single_tap_pressed");
 
 	TPD_INFO("detect %s gesture\n", gesture_info_temp.gesture_type == DouTap ? "double tap" :
 		 gesture_info_temp.gesture_type == UpVee ? "up vee" :
@@ -466,6 +463,26 @@ static void tp_gesture_handle(struct touchpanel_data *ts)
 		input_sync(ts->input_dev);
 	}
 }
+
+static inline ssize_t double_tap_pressed_get(struct device *device,
+				struct device_attribute *attribute,
+				char *buffer)
+{
+	struct touchpanel_data *ts = dev_get_drvdata(device);
+	return scnprintf(buffer, PAGE_SIZE, "%i\n", ts->double_tap_pressed);
+}
+
+static DEVICE_ATTR(double_tap_pressed, S_IRUGO, double_tap_pressed_get, NULL);
+
+static inline ssize_t single_tap_pressed_get(struct device *device,
+                                struct device_attribute *attribute,
+                                char *buffer)
+{
+        struct touchpanel_data *ts = dev_get_drvdata(device);
+        return scnprintf(buffer, PAGE_SIZE, "%i\n", ts->single_tap_pressed);
+}
+
+static DEVICE_ATTR(single_tap_pressed, S_IRUGO, single_tap_pressed_get, NULL);
 
 void tp_touch_btnkey_release(void)
 {
@@ -3048,6 +3065,14 @@ static int init_touchpanel_proc(struct touchpanel_data *ts)
 		TPD_INFO("driver_create_file failt\n");
 		ret = -ENOMEM;
 	}
+	if (device_create_file(&ts->client->dev, &dev_attr_double_tap_pressed)) {
+		TPD_INFO("driver_create_file failt\n");
+		ret = -ENOMEM;
+	}
+        if (device_create_file(&ts->client->dev, &dev_attr_single_tap_pressed)) {
+                TPD_INFO("driver_create_file failt\n");
+                ret = -ENOMEM;
+        }
 	//proc files-step2:/proc/touchpanel
 	prEntry_tp = proc_mkdir("touchpanel", NULL);
 	if (prEntry_tp == NULL) {

@@ -616,6 +616,8 @@ struct touchpanel_data {
 	size_t result_max_len;
 	size_t result_flag;
 	size_t result_cur_len;
+	int double_tap_pressed;
+	int single_tap_pressed;
 };
 
 void log_buf_write(struct touchpanel_data *ts, u8 value);
